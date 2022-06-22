@@ -31,10 +31,15 @@ async function run() {
     app.post("/booking", async (req, res) => {
       const booking = req.body;
       console.log(booking)
-      const query = {treatment: booking.treatment, date:booking.date,patientName:patientName}
-      const result = await bookingCollection.insertOne(booking);
-      return res.send({success:true,result});
-    })
+      const query = {treatmentName: booking.treatmentName, date: booking.date, patientName: booking.patientName};
+      const exists = await bookingCollection.findOne(query);
+      if(exists){
+        return res.send({success: false,booking:exists})
+      }else{
+        const result = await bookingCollection.insertOne(booking);
+        return res.send({success: true,result});
+      };
+    });
 
   } finally {
     // await client.close();
