@@ -15,6 +15,12 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+// dui line ke 
+// // const cursor = serviceCollection.find(query);
+// // const result = await cursor.toArray(cursor);
+// ek line a pawar jonow
+// //  const services = await serviceCollection.find().toArray();
+
 async function run() {
   try {
     await client.connect();
@@ -27,7 +33,37 @@ async function run() {
       const cursor = serviceCollection.find(query);
       const result = await cursor.toArray(cursor);
       res.send(result);
-    })
+    });
+    // DISCLIMER
+    // This is not the proper way
+    app.get('/available',async(req,res)=>{
+      const date = req.query.date;
+      // Step1: Get all api
+      const services = await serviceCollection.find().toArray();
+      // Step2: get the booking that day
+      const query = {date:date};
+      const bookings = await bookingCollection.find(query).toArray();
+      // // Step3: for each service
+      services.forEach(service=>{
+        // Step4: find bookings for that service
+        const serviceBookings = bookings.filter(book => book.treatmentName === service.name);
+        // Step5: select slots for the services bookings
+        const bookedSlots = serviceBookings.map(book => book.slot);
+        // Step5: select those slot that are not in bookedSlotes
+        const available = service.slots.filter(slot => !bookedSlots.includes(slot));
+        service.available = available;
+      })
+      // Step:3 for each service, find bookings for that service
+      // services.forEach(service =>{
+      //   const serviceBooking = bookings.filter(booking => booking.treatmentName === service.name);
+      //   const booked = serviceBooking.map(s=> s.slot);
+      //   const available = service.slots.filter(s=>!booked.includes(s));
+      //   service.available = available;
+      // });
+
+      res.send(services);
+    });
+
     app.post("/booking", async (req, res) => {
       const booking = req.body;
       console.log(booking)
