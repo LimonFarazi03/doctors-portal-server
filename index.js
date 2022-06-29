@@ -30,13 +30,8 @@ async function run() {
     const serviceCollection = client.db("doctors-portal").collection("services");
     const bookingCollection = client.db("doctors-portal").collection("bookings");
     const userCollection = client.db("doctors-portal").collection("users");
+    const doctorCollection = client.db("doctors-portal").collection("doctor");
 
-    function verifyJWT(req, res, next){
-      const authorization = req.headers.authorization;
-      if(!authorization){
-        return res.send({message: 'unAuthorized access'});
-      };
-    };
 
     app.get("/service", async (req, res) => {
       const query = req.body;
@@ -57,12 +52,7 @@ async function run() {
         $set: user,
       };
       const result = await userCollection.updateOne(filter, updateDoc, options);
-      const token = jwt.sign(
-        { patientEmail: patientEmail },
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "3h" }
-      );
-      res.send({ result, token });
+      res.send(result);
     });
 
     // DISCLIMER
@@ -101,29 +91,38 @@ async function run() {
 
     app.get("/booking", async (req, res) => {
       const patientEmail = req.query.patientEmail;
-      const authorization = req.headers.authorization;
-      // console.log("auth header", authorization);
       const query = { patientEmail: patientEmail };
       const bookings = await bookingCollection.find(query).toArray();
       res.send(bookings);
     });
 
-    app.post("/booking", verifyJWT, async (req, res) => {
+    app.post("/booking", async (req, res) => {
       const booking = req.body;
-      // console.log(booking);
-      const query = {
-        treatmentName: booking.treatmentName,
-        date: booking.date,
-        patientName: booking.patientName,
-      };
+      const query = { treatmentName: booking.treatmentName, date: booking.date, patientName: booking.patientName }
       const exists = await bookingCollection.findOne(query);
       if (exists) {
-        return res.send({ success: false, booking: exists });
-      } else {
-        const result = await bookingCollection.insertOne(booking);
-        return res.send({ success: true, result });
+          return res.send({ success: false, booking: exists })
       }
+      const result = await bookingCollection.insertOne(booking);
+      return res.send({ success: true, result });
     });
+
+    app.post('/doctor', async(req,res)=>{
+      const doctor = req.body;
+      const result = await doctorCollection.insertOne(doctor);
+      res.send(result);
+    });
+    app.get('/doctor', async(req,res)=>{
+      const result = await doctorCollection.find().toArray();
+      res.send(result);
+    });
+    app.delete('/doctor/:email', async(req,res)=>{
+      const email = req.params.email;
+      const filter = {email: email};
+      const result = await doctorCollection.deleteOne(filter);
+      res.send(result);
+    });
+
   } finally {
     // await client.close();
   }
